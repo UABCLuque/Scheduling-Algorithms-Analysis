@@ -1,617 +1,223 @@
-%Ejecutar algoritmo de despacho
-clc
-close all
-clear all
+﻿% Ejecutar algoritmo de despacho y comparar schedulers
+clc; 
+close all; 
+clear all;
 
+% Parametros de simulacion
 r = 1;
 freq = 2.6e9;
 Pout = 10;
 TTI = 10e-3;
 fi = 0.1;
-%frames = 50;
 frames = 5;
 buffer = 3;
-%buffer = 0;
-rdg = 2;    %Variable de generacion de distancias: 0, 1, o 2
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-tic
-%Variando Qty_UE
+rdg = 2;
 
-%Qty_UE = [10, 20, 30, 40, 50, 60, 70, 80, 90, 100];
-Qty_UE = [50, 100, 150, 200, 250];
-%Qty_UE = [100, 200, 300, 400, 500];
-%Qty_UE = [10, 20, 30, 40, 50];
-%Qty_UE = [50, 60, 70, 80, 90];
-BW =1.4e6;
-Pkg = 5e6;
-%Pkg = 1e6;
-%Pkg = 100e3;
+% Parametros para los barridos
+Qty_UE_vec = [50, 100, 150, 200, 250];
+BW_values = [1.4e6, 3e6, 5e6];
+Pkg_values = [1e6, 5e6, 10e6];
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%
-%   Round Robin
-%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-loop = 1;
+% Valores base para el 2do barrido
+baseline_BW = BW_values(1);
+baseline_Pkg = 5e6;
+baseline_Qty = 100;
 
-for UE = Qty_UE
+algNames = {'Round Robin', 'Best CQI', 'Blind Equal Throughput', 'Proportional Fair'};
+algoCalls = {@RR_function, @BCQI_function, @BET_FAST_function, @PF_FAST_function};
+nAlg = numel(algoCalls);
 
-[atp, FT, Ef, delay, outt] = RR_function(Qty_UE(loop), r, freq, Pout, BW, TTI, buffer, Pkg, fi, frames, rdg);
-loop = loop+1;
-ATP_RR(loop-1) = atp;
-F_T_RR(loop-1) = FT;
-Ef_RR(loop-1) = Ef;
-delay_RR(loop-1) = delay;
-outt_RR(loop-1) = outt;
+% Arrays donde se alojaran los resultados
+% Barrido de Qty_UE (con BW y Pkg fijos)
+nQty = numel(Qty_UE_vec);
+ATP_qty = zeros(nAlg, nQty);
+FT_qty = zeros(nAlg, nQty);
+Ef_qty = zeros(nAlg, nQty);
+delay_qty = zeros(nAlg, nQty);
+outt_qty = zeros(nAlg, nQty);
 
+% Barrido de BW (con Qty_UE y Pkg fijos)
+nBW = numel(BW_values);
+ATP_bw = zeros(nAlg, nBW);
+FT_bw = zeros(nAlg, nBW);
+Ef_bw = zeros(nAlg, nBW);
+delay_bw = zeros(nAlg, nBW);
+outt_bw = zeros(nAlg, nBW);
+
+% Barrido de packet size (con Qty_UE y BW fijos)
+nPkg = numel(Pkg_values);
+ATP_pkg = zeros(nAlg, nPkg);
+FT_pkg = zeros(nAlg, nPkg);
+Ef_pkg = zeros(nAlg, nPkg);
+delay_pkg = zeros(nAlg, nPkg);
+outt_pkg = zeros(nAlg, nPkg);
+
+% Se itera sobre cada valor de Qty_UE y se llama a cada algoritmo para obtener los resultados
+for i = 1:nQty
+    Qty_UE = Qty_UE_vec(i);
+    for a = 1:nAlg
+        [ATP_qty(a,i), FT_qty(a,i), Ef_qty(a,i), delay_qty(a,i), outt_qty(a,i)] = ...
+            algoCalls{a}(Qty_UE, r, freq, Pout, baseline_BW, TTI, buffer, baseline_Pkg, fi, frames, rdg);
+    end
 end
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%
-%   Best CQI
-%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-loop = 1;
-
-for UE = Qty_UE
-
-[atp, FT, Ef, delay, outt] = BCQI_function(Qty_UE(loop), r, freq, Pout, BW, TTI, buffer, Pkg, fi, frames, rdg);
-loop = loop+1;
-ATP_BCQI(loop-1) = atp;
-F_T_BCQI (loop-1) = FT;
-Ef_BCQI(loop-1) = Ef;
-delay_BCQI(loop-1) = delay;
-outt_BCQI(loop-1) = outt;
-
+% Se itera sobre cada valor de BW y se llama a cada algoritmo para obtener los resultados
+for i = 1:nBW
+    BW = BW_values(i);
+    for a = 1:nAlg
+        [ATP_bw(a,i), FT_bw(a,i), Ef_bw(a,i), delay_bw(a,i), outt_bw(a,i)] = ...
+            algoCalls{a}(baseline_Qty, r, freq, Pout, BW, TTI, buffer, baseline_Pkg, fi, frames, rdg);
+    end
 end
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%
-%   Blind Equal Throughput
-%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-loop = 1;
-
-for UE = Qty_UE
-
-[atp, FT, Ef, delay, outt] = BET_FAST_function(Qty_UE(loop), r, freq, Pout, BW, TTI, buffer, Pkg, fi, frames, rdg);
-loop = loop+1;
-ATP_BET(loop-1) = atp;
-F_T_BET (loop-1) = FT;
-Ef_BET(loop-1) = Ef;
-delay_BET(loop-1) = delay;
-outt_BET(loop-1) = outt;
-
+% Se itera sobre cada valor de packet size y se llama a cada algoritmo para obtener los resultados
+for i = 1:nPkg
+    Pkg = Pkg_values(i);
+    for a = 1:nAlg
+        [ATP_pkg(a,i), FT_pkg(a,i), Ef_pkg(a,i), delay_pkg(a,i), outt_pkg(a,i)] = ...
+            algoCalls{a}(baseline_Qty, r, freq, Pout, baseline_BW, TTI, buffer, Pkg, fi, frames, rdg);
+    end
 end
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%
-%   Proportional Fair
-%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-loop = 1;
-
-for UE = Qty_UE
-
-[atp, FT, Ef, delay, outt] = PF_FAST_function(Qty_UE(loop), r, freq, Pout, BW, TTI, buffer, Pkg, fi, frames, rdg);
-loop = loop+1;
-ATP_PF(loop-1) = atp;
-F_T_PF (loop-1) = FT;
-Ef_PF(loop-1) = Ef;
-delay_PF(loop-1) = delay;
-outt_PF(loop-1) = outt;
-
+% -------------------------------------------------------------------------
+% Throughput vs fairness plot para el barrido de Qty_UE
+% -------------------------------------------------------------------------
+figure('Color','w');
+markers = {'-o','-s','-^','-d'};
+for a = 1:nAlg
+    plot(ATP_qty(a,:), FT_qty(a,:), markers{a}, 'LineWidth', 1.5, 'DisplayName', algNames{a});
+    hold on;
 end
-
-toc
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%
-%   Grafica de fairness
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-figure()
-set(gcf,'Color','w')
-plot(Qty_UE,F_T_RR, '-x');
-title('Jains Index Fairness')
-xlabel('Numero de UE')
-ylabel('Fairness')
-ylim([0 1])
+xlabel('Throughput (bps)');
+ylabel('Fairness (Jain''s index)');
+title('Throughput vs Fairness for Qty_{UE} sweep');
 grid on;
-hold on;
+legend('Location','best');
+hold off;
 
-plot(Qty_UE,F_T_BCQI, '-x');
-plot(Qty_UE,F_T_BET, '-x');
-plot(Qty_UE,F_T_PF, '-x');
-legend('Round Robin', 'Best CQI', 'Blind Equal Throughput', 'Proportional Fair')
-
-hold off
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%
-%   Grafica de thoughput
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-figure()
-set(gcf,'Color','w')
-plot(Qty_UE,ATP_RR, '-x');
-title('Throughput')
-xlabel('Numero de UE')
-ylabel('Throughput')
+% -------------------------------------------------------------------------
+% Subplots de cada metrica vs Qty_UE para cada despachador
+% Aqui se varia el Qty_UE manteniendo fijo el BW y el packet size
+% -------------------------------------------------------------------------
+figure('Color','w');
+subplot(2,2,1);
+for a = 1:nAlg
+    plot(Qty_UE_vec, ATP_qty(a,:), markers{a}, 'LineWidth', 1.5); hold on;
+end
+xlabel('Qty_{UE}'); ylabel('Throughput (bps)');
+title('Throughput vs Qty_{UE}');
 grid on;
-hold on;
 
-plot(Qty_UE,ATP_BCQI, '-x');
-plot(Qty_UE,ATP_BET, '-x');
-plot(Qty_UE,ATP_PF, '-x');
-legend('Round Robin', 'Best CQI', 'Blind Equal Throughput', 'Proportional Fair')
-
-hold off
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%
-%   Grafica de eficiencia
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-figure()
-set(gcf,'Color','w')
-plot(Qty_UE,Ef_RR, '-x');
-title('Eficiencia espectral (bps/Hz)')
-xlabel('Numero de UE')
-ylabel('Eficiencia Espectral')
+subplot(2,2,2);
+for a = 1:nAlg
+    plot(Qty_UE_vec, FT_qty(a,:), markers{a}, 'LineWidth', 1.5); hold on;
+end
+xlabel('Qty_{UE}'); ylabel('Fairness');
+title('Fairness vs Qty_{UE}');
 grid on;
-hold on;
 
-plot(Qty_UE,Ef_BCQI, '-x');
-plot(Qty_UE,Ef_BET, '-x');
-plot(Qty_UE,Ef_PF, '-x');
-legend('Round Robin', 'Best CQI', 'Blind Equal Throughput', 'Proportional Fair')
-
-hold off
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%
-%   Grafica de delay
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-figure()
-set(gcf,'Color','w')
-plot(Qty_UE,delay_RR, '-x');
-title('Delay (s)')
-xlabel('Numero de UE')
-ylabel('Delay (s)')
+subplot(2,2,3);
+for a = 1:nAlg
+    plot(Qty_UE_vec, Ef_qty(a,:), markers{a}, 'LineWidth', 1.5); hold on;
+end
+xlabel('Qty_{UE}'); ylabel('Spectral efficiency (bps/Hz)');
+title('Efficiency vs Qty_{UE}');
 grid on;
-hold on;
 
-plot(Qty_UE,delay_BCQI, '-x');
-plot(Qty_UE,delay_BET, '-x');
-plot(Qty_UE,delay_PF, '-x');
-legend('Round Robin', 'Best CQI', 'Blind Equal Throughput', 'Proportional Fair')
-
-hold off
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%
-%   Grafica de outtage
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-figure()
-set(gcf,'Color','w')
-%plot(Qty_UE,out_RR, '-o');
-%bar(Qty_UE, outt_RR);
-bar( Qty_UE, [outt_RR; outt_BCQI; outt_BET; outt_PF] )
-title('Probabilidad de interrupción (%)')
-xlabel('Numero de UE')
-ylabel('Porcentaje (s)')
+subplot(2,2,4);
+for a = 1:nAlg
+    plot(Qty_UE_vec, delay_qty(a,:), markers{a}, 'LineWidth', 1.5); hold on;
+end
+xlabel('Qty_{UE}'); ylabel('Delay (s)');
+title('Delay vs Qty_{UE}');
 grid on;
-hold on;
+legend(algNames, 'Location', 'bestoutside');
 
-%plot(Qty_UE,out_BCQI, '-o');
-%bar(Qty_UE, outt_BCQI);
-%plot(Qty_UE,out_BET, '-o');
-%bar(Qty_UE, outt_BET);
-%plot(Qty_UE,out_PF, 'o');
-%bar(Qty_UE, outt_PF);
-legend('Round Robin', 'Best CQI', 'Blind Equal Throughput', 'Proportional Fair')
-
-hold off
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%
-%   Grafica de sensitividad throughput v fairness
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-figure()
-set(gcf,'Color','w')
-plot(ATP_RR,F_T_RR, '-x');
-title('Throughput v Fairness')
-xlabel('Throughput')
-ylabel('Fairness')
-%xlim([0 1e9])
-%ylim([0 1])
+% -------------------------------------------------------------------------
+% Outage vs Qty_UE
+% -------------------------------------------------------------------------
+figure('Color','w');
+for a = 1:nAlg
+    plot(Qty_UE_vec, outt_qty(a,:), markers{a}, 'LineWidth', 1.5); hold on;
+end
+xlabel('Qty_{UE}'); ylabel('Outage (%)');
+title('Outage vs Qty_{UE}');
 grid on;
-hold on;
+legend(algNames, 'Location', 'best');
+hold off;
 
-plot(ATP_BCQI,F_T_BCQI, '-x');
-plot(ATP_BET,F_T_BET, '-x');
-plot(ATP_PF,F_T_PF, '-x');
-legend('Round Robin', 'Best CQI', 'Blind Equal Throughput', 'Proportional Fair')
-
-hold off
-
-%%%%%%%%%%%SCATTER%%%%%%%%%%%%%
-figure()
-set(gcf,'Color','w')
-scatter(ATP_RR, F_T_PF, Qty_UE,"filled")
-title('Throughput v Fairness')
-xlabel('Throughput')
-ylabel('Fairness')
+% -------------------------------------------------------------------------
+% Subplot de cada metrica vs BW para cada despachador
+% Aqui se varia el BW manteniendo fijo el Qty_UE y el packet size
+% -------------------------------------------------------------------------
+figure('Color','w');
+subplot(2,2,1);
+for a = 1:nAlg
+    plot(BW_values/1e6, ATP_bw(a,:), markers{a}, 'LineWidth', 1.5); hold on;
+end
+xlabel('BW (MHz)'); ylabel('Throughput (bps)');
+title(sprintf('Throughput vs BW (Qty_{UE}=%d)', baseline_Qty));
 grid on;
-hold on;
 
-scatter(ATP_BCQI,F_T_BCQI, Qty_UE,"filled");
-scatter(ATP_BET,F_T_BET, Qty_UE,"filled");
-scatter(ATP_PF,F_T_PF, Qty_UE,"filled");
-legend('Round Robin', 'Best CQI', 'Blind Equal Throughput', 'Proportional Fair')
-
-hold off
-
-%%%%%%%%SCATTER+LINES%%%%%%%%%%%
-figure()
-set(gcf,'Color','w')
-
-% Round Robin (blue)
-plot(ATP_RR, F_T_RR, '-','Color',[0 0.4470 0.7410]); hold on;
-scatter(ATP_RR, F_T_RR, Qty_UE, 'filled', ...
-    'MarkerFaceColor',[0 0.4470 0.7410], 'MarkerEdgeColor','k');
-
-% Best CQI (orange)
-plot(ATP_BCQI, F_T_BCQI, '-','Color',[0.8500 0.3250 0.0980]);
-scatter(ATP_BCQI, F_T_BCQI, Qty_UE, 'filled', ...
-    'MarkerFaceColor',[0.8500 0.3250 0.0980], 'MarkerEdgeColor','k');
-
-% Blind Equal Throughput (yellow)
-plot(ATP_BET, F_T_BET, '-','Color',[0.9290 0.6940 0.1250]);
-scatter(ATP_BET, F_T_BET, Qty_UE, 'filled', ...
-    'MarkerFaceColor',[0.9290 0.6940 0.1250], 'MarkerEdgeColor','k');
-
-% Proportional Fair (purple)
-plot(ATP_PF, F_T_PF, '-','Color',[0.4940 0.1840 0.5560]);
-scatter(ATP_PF, F_T_PF, Qty_UE, 'filled', ...
-    'MarkerFaceColor',[0.4940 0.1840 0.5560], 'MarkerEdgeColor','k');
-
-xlabel('Throughput')
-ylabel('Fairness')
-title('Throughput v Fairness with User Count')
-grid on
-
-legend('Round Robin','Best CQI','Blind Equal Throughput','Proportional Fair')
-
-hold off
-
-
-%%%%%%%%%%%LABELS%%%%%%%%%%%%%
-% figure()
-% set(gcf,'Color','w')
-% 
-% plot(ATP_RR, F_T_RR, '-x'); 
-% hold on;
-% plot(ATP_BCQI, F_T_BCQI, '-x');
-% plot(ATP_BET, F_T_BET, '-x');
-% plot(ATP_PF, F_T_PF, '-x');
-% 
-% xlabel('Throughput')
-% ylabel('Fairness')
-% title('Throughput v Fairness with User Count')
-% grid on
-% 
-% legend('Round Robin','Best CQI','Blind Equal Throughput','Proportional Fair')
-% 
-% % Annotate user counts for each algorithm
-% for i = 1:length(Users_RR)
-%     text(ATP_RR(i), F_T_RR(i), sprintf('%d users', Users_RR(i)), ...
-%         'VerticalAlignment','bottom','HorizontalAlignment','right');
-% end
-% for i = 1:length(Users_BCQI)
-%     text(ATP_BCQI(i), F_T_BCQI(i), sprintf('%d users', Users_BCQI(i)), ...
-%         'VerticalAlignment','bottom','HorizontalAlignment','right');
-% end
-% for i = 1:length(Users_BET)
-%     text(ATP_BET(i), F_T_BET(i), sprintf('%d users', Users_BET(i)), ...
-%         'VerticalAlignment','bottom','HorizontalAlignment','right');
-% end
-% for i = 1:length(Users_PF)
-%     text(ATP_PF(i), F_T_PF(i), sprintf('%d users', Users_PF(i)), ...
-%         'VerticalAlignment','bottom','HorizontalAlignment','right');
-% end
-% 
-% hold off
-
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%
-%   Grafica de sensitividad throughput v fairness v usuarios
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-figure()
-set(gcf,'Color','w')
-plot3(ATP_RR,F_T_RR,Qty_UE, '-o');
-title('Throughput v Fairness')
-xlabel('Throughput')
-ylabel('Fairness')
-%xlim([0 1e9])
-%ylim([0 1])
+subplot(2,2,2);
+for a = 1:nAlg
+    plot(BW_values/1e6, FT_bw(a,:), markers{a}, 'LineWidth', 1.5); hold on;
+end
+xlabel('BW (MHz)'); ylabel('Fairness');
+title(sprintf('Fairness vs BW (Qty_{UE}=%d)', baseline_Qty));
 grid on;
-hold on;
 
-plot3(ATP_BCQI,F_T_BCQI,Qty_UE, '-o');
-plot3(ATP_BET,F_T_BET,Qty_UE, '-o');
-plot3(ATP_PF,F_T_PF,Qty_UE, '-o');
-legend('Round Robin', 'Best CQI', 'Blind Equal Throughput', 'Proportional Fair')
+subplot(2,2,3);
+for a = 1:nAlg
+    plot(BW_values/1e6, Ef_bw(a,:), markers{a}, 'LineWidth', 1.5); hold on;
+end
+xlabel('BW (MHz)'); ylabel('Spectral efficiency (bps/Hz)');
+title(sprintf('Efficiency vs BW (Qty_{UE}=%d)', baseline_Qty));
+grid on;
 
-hold off
+subplot(2,2,4);
+for a = 1:nAlg
+    plot(BW_values/1e6, outt_bw(a,:), markers{a}, 'LineWidth', 1.5); hold on;
+end
+xlabel('BW (MHz)'); ylabel('Outage (%)');
+title(sprintf('Outage vs BW (Qty_{UE}=%d)', baseline_Qty));
+grid on;
+legend(algNames, 'Location', 'bestoutside');
 
-% figure()
-% set(gcf,'Color','w')
-% comet3(ATP_RR,F_T_RR,Qty_UE);
+% -------------------------------------------------------------------------
+% Subplot de cada metrica vs packet size para cada despachador
+% Aqui se varia el packet size manteniendo fijo el Qty_UE y el BW
+% -------------------------------------------------------------------------
+figure('Color','w');
+subplot(2,2,1);
+for a = 1:nAlg
+    plot(Pkg_values/1e6, ATP_pkg(a,:), markers{a}, 'LineWidth', 1.5); hold on;
+end
+xlabel('Packet size (Mbits)'); ylabel('Throughput (bps)');
+title(sprintf('Throughput vs Pkg (Qty_{UE}=%d)', baseline_Qty));
+grid on;
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% tic
-% %Variando BW
-% 
-% BW = [1.4e6, 3e6, 5e6, 10e6, 15e6, 20e6];
-% %Qty_UE = [50, 100, 150, 200, 250];
-% %Qty_UE = [10, 20, 30, 40, 50];
-% Qty_UE = 50;
-% Pkg = 50e6;
-% 
-% ATP_RR = 0;
-% F_T_RR = 0;
-% Ef_RR = 0;
-% delay_RR = 0;
-% outt_RR = 0;
-% ATP_BCQI = 0;
-% F_T_BCQI = 0;
-% Ef_BCQI = 0;
-% delay_BCQI = 0;
-% outt_BCQI = 0;
-% ATP_BET = 0;
-% F_T_BET = 0;
-% Ef_BET = 0;
-% delay_BET = 0;
-% outt_BET = 0;
-% ATP_PF = 0;
-% F_T_PF = 0;
-% Ef_PF = 0;
-% delay_PF = 0;
-% outt_PF = 0;
-% 
-% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% %
-% %   Round Robin
-% %
-% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% loop = 1;
-% 
-% for UE = BW
-% 
-% [atp, FT, Ef, delay, outt] = RR_function(Qty_UE, r, freq, Pout, BW(loop), TTI, buffer, Pkg, fi, frames);
-% loop = loop+1;
-% ATP_RR(loop-1) = atp;
-% F_T_RR(loop-1) = FT;
-% Ef_RR(loop-1) = Ef;
-% delay_RR(loop-1) = delay;
-% outt_RR(loop-1) = outt;
-% 
-% end
-% 
-% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% %
-% %   Best CQI
-% %
-% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% loop = 1;
-% 
-% for UE = BW
-% 
-% [atp, FT, Ef, delay, outt] = BCQI_function(Qty_UE, r, freq, Pout, BW(loop), TTI, buffer, Pkg, fi, frames);
-% loop = loop+1;
-% ATP_BCQI(loop-1) = atp;
-% F_T_BCQI (loop-1) = FT;
-% Ef_BCQI(loop-1) = Ef;
-% delay_BCQI(loop-1) = delay;
-% outt_BCQI(loop-1) = outt;
-% 
-% end
-% 
-% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% %
-% %   Blind Equal Throughput
-% %
-% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% loop = 1;
-% 
-% for UE = BW
-% 
-% [atp, FT, Ef, delay, outt] = BET_FAST_function(Qty_UE, r, freq, Pout, BW(loop), TTI, buffer, Pkg, fi, frames);
-% loop = loop+1;
-% ATP_BET(loop-1) = atp;
-% F_T_BET (loop-1) = FT;
-% Ef_BET(loop-1) = Ef;
-% delay_BET(loop-1) = delay;
-% outt_BET(loop-1) = outt;
-% 
-% end
-% 
-% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% %
-% %   Proportional Fair
-% %
-% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% loop = 1;
-% 
-% for UE = BW
-% 
-% [atp, FT, Ef, delay, outt] = PF_FAST_function(Qty_UE, r, freq, Pout, BW(loop), TTI, buffer, Pkg, fi, frames);
-% loop = loop+1;
-% ATP_PF(loop-1) = atp;
-% F_T_PF (loop-1) = FT;
-% Ef_PF(loop-1) = Ef;
-% delay_PF(loop-1) = delay;
-% outt_PF(loop-1) = outt;
-% 
-% end
-% 
-% toc
-% 
-% %%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% %
-% %   Grafica de fairness
-% %%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% figure()
-% set(gcf,'Color','w')
-% plot(BW,F_T_RR, '-x');
-% title('Jains Index Fairness')
-% xlabel('Ancho de Banda')
-% ylabel('Fairness')
-% ylim([0 1])
-% grid on;
-% hold on;
-% 
-% plot(BW,F_T_BCQI, '-x');
-% plot(BW,F_T_BET, '-x');
-% plot(BW,F_T_PF, '-x');
-% legend('Round Robin', 'Best CQI', 'Blind Equal Throughput', 'Proportional Fair')
-% 
-% hold off
-% 
-% %%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% %
-% %   Grafica de thoughput
-% %%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% figure()
-% set(gcf,'Color','w')
-% plot(BW,ATP_RR, '-x');
-% title('Throughput')
-% xlabel('Numero de UE')
-% ylabel('Throughput')
-% grid on;
-% hold on;
-% 
-% plot(BW,ATP_BCQI, '-x');
-% plot(BW,ATP_BET, '-x');
-% plot(BW,ATP_PF, '-x');
-% legend('Round Robin', 'Best CQI', 'Blind Equal Throughput', 'Proportional Fair')
-% 
-% hold off
-% 
-% %%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% %
-% %   Grafica de eficiencia
-% %%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% figure()
-% set(gcf,'Color','w')
-% plot(BW,Ef_RR, '-x');
-% title('Eficiencia espectral (bps/Hz)')
-% xlabel('Numero de UE')
-% ylabel('Eficiencia Espectral')
-% grid on;
-% hold on;
-% 
-% plot(BW,Ef_BCQI, '-x');
-% plot(BW,Ef_BET, '-x');
-% plot(BW,Ef_PF, '-x');
-% legend('Round Robin', 'Best CQI', 'Blind Equal Throughput', 'Proportional Fair')
-% 
-% hold off
-% 
-% %%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% %
-% %   Grafica de delay
-% %%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% figure()
-% set(gcf,'Color','w')
-% plot(BW,delay_RR, '-x');
-% title('Delay (s)')
-% xlabel('Numero de UE')
-% ylabel('Delay (s)')
-% grid on;
-% hold on;
-% 
-% plot(BW,delay_BCQI, '-x');
-% plot(BW,delay_BET, '-x');
-% plot(BW,delay_PF, '-x');
-% legend('Round Robin', 'Best CQI', 'Blind Equal Throughput', 'Proportional Fair')
-% 
-% hold off
-% 
-% %%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% %
-% %   Grafica de outtage
-% %%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% figure()
-% set(gcf,'Color','w')
-% %plot(Qty_UE,out_RR, '-o');
-% %bar(Qty_UE, outt_RR);
-% bar( BW, [outt_RR; outt_BCQI; outt_BET; outt_PF] )
-% title('Probabilidad de interrupción (%)')
-% xlabel('Numero de UE')
-% ylabel('Porcentaje (s)')
-% grid on;
-% hold on;
-% 
-% %plot(Qty_UE,out_BCQI, '-o');
-% %bar(Qty_UE, outt_BCQI);
-% %plot(Qty_UE,out_BET, '-o');
-% %bar(Qty_UE, outt_BET);
-% %plot(Qty_UE,out_PF, 'o');
-% %bar(Qty_UE, outt_PF);
-% legend('Round Robin', 'Best CQI', 'Blind Equal Throughput', 'Proportional Fair')
-% 
-% hold off
-% 
-% %%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% %
-% %   Grafica de sensitividad throughput v fairness
-% %%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% figure()
-% set(gcf,'Color','w')
-% plot(ATP_RR,F_T_RR, '-x');
-% title('Delay (s)')
-% xlabel('Throughput')
-% ylabel('Fairness')
-% grid on;
-% hold on;
-% 
-% plot(ATP_BCQI,F_T_BCQI, '-x');
-% plot(ATP_BET,F_T_BET, '-x');
-% plot(ATP_PF,F_T_PF, '-x');
-% legend('Round Robin', 'Best CQI', 'Blind Equal Throughput', 'Proportional Fair')
-% 
-% hold off
+subplot(2,2,2);
+for a = 1:nAlg
+    plot(Pkg_values/1e6, FT_pkg(a,:), markers{a}, 'LineWidth', 1.5); hold on;
+end
+xlabel('Packet size (Mbits)'); ylabel('Fairness');
+title(sprintf('Fairness vs Pkg (Qty_{UE}=%d)', baseline_Qty));
+grid on;
 
+subplot(2,2,3);
+for a = 1:nAlg
+    plot(Pkg_values/1e6, delay_pkg(a,:), markers{a}, 'LineWidth', 1.5); hold on;
+end
+xlabel('Packet size (Mbits)'); ylabel('Delay (s)');
+title(sprintf('Delay vs Pkg (Qty_{UE}=%d)', baseline_Qty));
+grid on;
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%
-%   Guardar resultados en una tabla
-%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-% UserEq = Qty_UE;
-% Frecuencia = freq;
-% Radio = r;
-% Potencia = Pout;
-% Bandwidth = BW;
-% Pkg_size = Pkg;
-% Frames = frames;
-% Buffer = buffer;
-% 
-% Scheduler = {'Round Robin';'Best CQI';'Blind Equal Throughput';'Proportional Fair'};
-% Fairness = [F_T_RR;F_T_BCQI;F_T_BET;F_T_PF];
-% Throughput = [ATP_RR;ATP_BCQI;ATP_BET;ATP_PF];
-% Eficiencia = [Ef_RR;Ef_BCQI;Ef_BET;Ef_PF];
-% Delay = [delay_RR; delay_BCQI; delay_BET; delay_PF];
-% Outage = [outt_RR; outt_BCQI; outt_BET; outt_PF];
-% 
-% Data = table(UserEq, Frecuencia, Radio, Potencia, Bandwidth, Pkg_size, Frames, Buffer);
-% T = table(Scheduler,Fairness,Throughput,Eficiencia,Delay,Outage);
-% 
-% writetable(Data,sprintf('Sim_UE%d-%d_%g_%g_%g_%d_%d.xlsx',Qty_UE(1), Qty_UE(length(Qty_UE)),freq, BW, Pkg, frames, buffer),'WriteRowNames',true, 'Sheet', 'Datos')
-% writetable(T,sprintf('Sim_UE%d-%d_%g_%g_%g_%d_%d.xlsx',Qty_UE(1), Qty_UE(length(Qty_UE)),freq, BW, Pkg, frames, buffer),'WriteRowNames',true, 'Sheet', 'Resultados')
+subplot(2,2,4);
+for a = 1:nAlg
+    plot(Pkg_values/1e6, outt_pkg(a,:), markers{a}, 'LineWidth', 1.5); hold on;
+end
+xlabel('Packet size (Mbits)'); ylabel('Outage (%)');
+title(sprintf('Outage vs Pkg (Qty_{UE}=%d)', baseline_Qty));
+grid on;
+legend(algNames, 'Location', 'bestoutside');
