@@ -88,6 +88,14 @@ for a = 1:nAlg
     plot(ATP_qty(a,:), FT_qty(a,:), markers{a}, 'LineWidth', 1.5, 'DisplayName', algNames{a});
     hold on;
 end
+% Agregar etiquetas de Qty_UE a cada punto
+for a = 1:nAlg
+    for i = 1:nQty
+        x = ATP_qty(a,i);
+        y = FT_qty(a,i);
+        text(x, y, sprintf(' %d', Qty_UE_vec(i)), 'FontSize',8, 'VerticalAlignment','bottom', 'HorizontalAlignment','left');
+    end
+end
 xlabel('Throughput (bps)');
 ylabel('Fairness (Jain''s index)');
 title('Throughput vs Fairness for Qty_{UE} sweep');
