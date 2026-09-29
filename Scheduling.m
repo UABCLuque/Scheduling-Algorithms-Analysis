@@ -104,6 +104,54 @@ legend('Location','best');
 hold off;
 
 % -------------------------------------------------------------------------
+% Throughput vs fairness plot para el barrido de BW
+% -------------------------------------------------------------------------
+figure('Color','w');
+markers = {'-o','-s','-^','-d'};
+for a = 1:nAlg
+    plot(ATP_bw(a,:), FT_bw(a,:), markers{a}, 'LineWidth', 1.5, 'DisplayName', algNames{a});
+    hold on;
+end
+% Agregar etiquetas de BW a cada punto
+for a = 1:nAlg
+    for i = 1:nBW
+        x = ATP_bw(a,i);
+        y = FT_bw(a,i);
+        text(x, y, sprintf(' %.1f', BW_values(i)/1e6), 'FontSize',8, 'VerticalAlignment','bottom', 'HorizontalAlignment','left');
+    end
+end
+xlabel('Throughput (bps)');
+ylabel('Fairness (Jain''s index)');
+title('Throughput vs Fairness for BW sweep');
+grid on;
+legend('Location','best');
+hold off;
+
+% -------------------------------------------------------------------------
+% Throughput vs fairness plot para el barrido de packet size
+% -------------------------------------------------------------------------
+figure('Color','w');
+markers = {'-o','-s','-^','-d'};
+for a = 1:nAlg
+    plot(ATP_pkg(a,:), FT_pkg(a,:), markers{a}, 'LineWidth', 1.5, 'DisplayName', algNames{a});
+    hold on;
+end
+% Agregar etiquetas de Pkg a cada punto
+for a = 1:nAlg
+    for i = 1:nPkg
+        x = ATP_pkg(a,i);
+        y = FT_pkg(a,i);
+        text(x, y, sprintf(' %.1f', Pkg_values(i)/1e6), 'FontSize',8, 'VerticalAlignment','bottom', 'HorizontalAlignment','left');
+    end
+end
+xlabel('Throughput (bps)');
+ylabel('Fairness (Jain''s index)');
+title('Throughput vs Fairness for Pkg sweep');
+grid on;
+legend('Location','best');
+hold off;
+
+% -------------------------------------------------------------------------
 % Subplots de cada metrica vs Qty_UE para cada despachador
 % Aqui se varia el Qty_UE manteniendo fijo el BW y el packet size
 % -------------------------------------------------------------------------
