@@ -1,0 +1,16 @@
+# Papers (large, and kept locally)
+references/papers/*.pdf
+
+# LaTeX build files
+*.aux
+*.log
+*.out
+*.toc
+*.synctex.gz
+*.bbl
+*.blg
+*.fdb_latexmk
+*.fls
+
+# Word temp files
+~$*.docx
